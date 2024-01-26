@@ -107,4 +107,39 @@ Describe Applier class
       \.run()
   End
 
+  It removes current line if leaving insert mode just after newline.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
+      \.run()
+  End
+
+  It removes current line if leaving insert mode just after newline (with indentation).
+    set expandtab smarttab shiftwidth=2
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('i<Tab>if<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['  if', '  endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
+      \.run()
+  End
+
+
+  It does not remove current line when leaving insert mode when do some editing.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('foo<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfoo", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 4])})
+      \.run()
+  End
+
 End
