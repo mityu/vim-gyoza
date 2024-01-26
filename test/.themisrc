@@ -1,0 +1,24 @@
+call themis#option('reporter', 'dot')
+
+call themis#log('sourced helpers:')
+for s:f in split(glob(expand('<sfile>:h') . '/helper/*.vim'), "\n")
+  call themis#log('  ' . s:f)
+  source `=s:f`
+endfor
+unlet s:f
+
+function ScriptFuncs(path) abort
+  let V = vital#themis#import('Vim.ScriptLocal')
+  let sid = V.sid(a:path)
+  let list = split(execute(printf("function /\<SNR>%d_", sid)), "\n")
+  let list = map(list, {-> matchstr(v:val, '^\%(def\|function\)\s\+\zs[^(]\+')})
+  let list = filter(list, {-> v:val !=# ''})
+  let list = map(list, {-> [matchstr(v:val, '^<SNR>\d\+_\zs.*$'), v:val]})
+
+  let funcs = {}
+  for [name, fn] in list
+    let funcs[name] = function(fn, [])
+  endfor
+  call themis#func_alias(funcs)
+  return funcs
+endfunction
