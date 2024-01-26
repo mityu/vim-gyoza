@@ -1,0 +1,110 @@
+" call themis#log(readfile(expand('<sfile>'))) | finish
+let s:assert = themis#helper('assert')
+call themis#helper('command').with(s:assert)
+call themis#func_alias(s:assert)
+
+let s:A = ScriptFuncs('autoload/gyoza/applier.vim')
+let s:C = ScriptFuncs('autoload/gyoza/config.vim')
+
+Describe Applier class
+  Before all
+    call test_override('char_avail', 1)
+    let NewConfig = s:C.new_rule_stack
+    filetype indent on
+  End
+
+  After all
+    %bwipeout!
+    call test_override('char_avail', 0)
+    unlet NewConfig
+    set expandtab& smarttab& shiftwidth& tabstop&
+    filetype indent off
+  End
+
+  Before each
+    %bwipeout!
+    set expandtab& smarttab& shiftwidth& tabstop&
+    set filetype=vim
+  End
+
+  It is a validation.
+    " Check for the auto indentation.
+    Feedkeys iif foo<CR>aaa<CR>endif<ESC>
+    Assert Equals(GetAllLines(), ['if foo', "\taaa", 'endif'])
+  End
+
+  It completes closing pair with no indentation.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif aaa<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['if aaa', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.run()
+  End
+
+  It completes closing pair with indentation.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('i<Tab>if aaa<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ["\tif aaa", "\t\t", "\tendif"])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
+      \.run()
+  End
+
+  It completes closing pair with some rules.
+    let rules = NewConfig()
+      \.add_rule('^\s*if\>', 'endif')
+      \.add_rule('^\s*while\>', 'endwhile')
+      \._rules
+    call NewScripter()
+      \.feedkeys('iwhile<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['while', "\t", 'endwhile'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.run()
+  End
+
+  It applies the first matched rule.
+    let rules = NewConfig()
+      \.add_rule('^\s*if\>', 'endif')
+      \.add_rule('^\s*if\>', 'end')
+      \._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.run()
+  End
+
+  It does not complete pair if next line has deeper indentation.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, ['if aaa', "\tfoo"])
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['if aaa', "\t", "\tfoo"])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.run()
+  End
+
+  It does not complete pair if there's already the pair.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, ['if', 'endif'])
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.run()
+  End
+
+End

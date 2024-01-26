@@ -22,3 +22,12 @@ function ScriptFuncs(path) abort
   call themis#func_alias(funcs)
   return funcs
 endfunction
+
+function GetAllLines() abort
+  return getline(1, '$')
+endfunction
+
+function GetCurpos() abort
+  return getcurpos()[1 : 2]
+endfunction
+

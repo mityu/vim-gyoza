@@ -1,0 +1,88 @@
+let s:assert = themis#helper('assert')
+call themis#helper('command').with(s:assert)
+call themis#func_alias(s:assert)
+
+let s:F = themis#helper('scope').funcs('autoload/gyoza/config.vim')
+
+
+Describe Rule stack class
+  Before all
+    let GetInstance = {-> s:F.new_rule_stack()}
+    let PickPatterns = {rules -> map(deepcopy(rules), 'v:val.pattern')}
+    let PickPairs = {rules -> map(deepcopy(rules), 'v:val.pair')}
+  End
+
+  After all
+    unlet GetInstance
+    unlet PickPatterns
+  End
+
+  It has no rules at first.
+    let c = GetInstance()
+    Assert Equals(c._rules, [])
+  End
+
+  It can add a rule.
+    let c = GetInstance()
+    call c.add_rule('if', 'endif')
+    Assert LengthOf(c._rules, 1)
+    Assert Equals(PickPatterns(c._rules), ['if'])
+  End
+
+  It can add some rules.
+    let c = GetInstance()
+    call c.add_rule('if-1', 'endif')
+    Assert LengthOf(c._rules, 1)
+    call c.add_rule('if-2', 'endif')
+    Assert LengthOf(c._rules, 2)
+    Assert Equals(PickPatterns(c._rules), ['if-1', 'if-2'])
+  End
+
+  It clears rules.
+    let c = GetInstance()
+    call c.add_rule('...', '...')
+    call c.clear_rules()
+    Assert Equals(c._rules, [])
+  End
+
+  It can hold rules with same pattern.
+    let c = GetInstance()
+    call c.add_rule('if', 'endif-1')
+    call c.add_rule('if', 'endif-2')
+    Assert LengthOf(c._rules, 2)
+    Assert Equals(PickPatterns(c._rules), ['if', 'if'])
+    Assert Equals(PickPairs(c._rules), ['endif-1', 'endif-2'])
+  End
+
+  It can import rules from other Config object.
+    let c1 = GetInstance()
+    let c2 = GetInstance()
+    call c1.add_rule('c1', 'c1-pair')
+    call c1.add_rule('if', 'if-pair-1')
+    call c2.add_rule('c2', 'c2-pair')
+    call c2.add_rule('if', 'if-pair-2')
+    call c1.extend_rules(c2)
+    Assert LengthOf(c1._rules, 4)
+    Assert Equals(PickPatterns(c1._rules), ['c1', 'if', 'c2', 'if'])
+    Assert Equals(PickPairs(c1._rules), ['c1-pair', 'if-pair-1', 'c2-pair', 'if-pair-2'])
+    Assert LengthOf(c2._rules, 2)
+    Assert Equals(PickPatterns(c2._rules), ['c2', 'if'])
+    Assert Equals(PickPairs(c2._rules), ['c2-pair', 'if-pair-2'])
+  End
+
+  It's clear_rules() does not affect distributed rules.
+    let c1 = GetInstance()
+    let c2 = GetInstance()
+    call c1.add_rule('c1', 'c1-pair')
+    call c2.add_rule('c2', 'c2-pair')
+    call c1.extend_rules(c2)
+    Assert LengthOf(c1._rules, 2)
+    Assert LengthOf(c2._rules, 1)
+    call c2.clear_rules()
+    Assert LengthOf(c1._rules, 2)
+    Assert Equals(PickPatterns(c1._rules), ['c1', 'c2'])
+    Assert LengthOf(c2._rules, 0)
+  End
+
+End
+
