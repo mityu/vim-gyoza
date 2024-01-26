@@ -8,6 +8,8 @@ let s:C = ScriptFuncs('autoload/gyoza/config.vim')
 
 Describe Applier class
   Before all
+    command ResetOptions
+      \ set expandtab& smarttab& shiftwidth& tabstop& backspace&
     call test_override('char_avail', 1)
     let NewConfig = s:C.new_rule_stack
     filetype indent on
@@ -15,15 +17,16 @@ Describe Applier class
 
   After all
     %bwipeout!
+    ResetOptions
     call test_override('char_avail', 0)
     unlet NewConfig
-    set expandtab& smarttab& shiftwidth& tabstop&
+    delcommand ResetOptions
     filetype indent off
   End
 
   Before each
     %bwipeout!
-    set expandtab& smarttab& shiftwidth& tabstop&
+    ResetOptions
     set filetype=vim
   End
 
@@ -131,7 +134,7 @@ Describe Applier class
   End
 
 
-  It does not remove current line when leaving insert mode when do some editing.
+  It doesn't remove current line when leaving insert mode after typing some words.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
       \.feedkeys('iif<CR>')
@@ -140,6 +143,32 @@ Describe Applier class
       \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfoo", 'endif'])})
       \.call({-> s:assert.equals(GetCurpos(), [2, 4])})
       \.run()
+  End
+
+  It doesn't remove current line when leaving insert mode after typing <C-h>.
+    set backspace=indent
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.feedkeys('<C-u>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', '', 'endif'])})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', '', 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
+      \.run()
+  End
+
+  It clears temporal mappings properly.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<ESC>')
+      \.run()
+    let maps = execute('imap <Plug>')->trim()->split("\n")
+    Assert Equals(maps, ['No mapping found'])
   End
 
 End
