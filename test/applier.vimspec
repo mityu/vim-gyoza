@@ -110,6 +110,19 @@ Describe Applier class
       \.run()
   End
 
+  It doesn't complete pair when second newline.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', '', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [3, 2])})
+      \.run()
+  End
+
   It removes current line if leaving insert mode just after newline.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
@@ -132,7 +145,6 @@ Describe Applier class
       \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
       \.run()
   End
-
 
   It doesn't remove current line when leaving insert mode after typing some words.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
@@ -158,6 +170,70 @@ Describe Applier class
       \.call({-> s:assert.equals(GetAllLines(), ['if', '', 'endif'])})
       \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
       \.run()
+  End
+
+  It doesn't remove current line when type <CR> twice.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', '', '', 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [3, 1])})
+      \.run()
+  End
+
+  It can undo step by step.
+    set expandtab smarttab shiftwidth=2
+
+    let undo0 =<< trim END
+    if
+      aaaa
+    endif
+    END
+
+    let undo1 =<< trim END
+    if
+    endif
+    END
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('aaaa<ESC>')
+      \.run()
+    Assert Equals(GetAllLines(), undo0)
+    Assert Equals(GetCurpos(), [2, 6])
+    normal! u
+    Assert Equals(GetAllLines(), undo1)
+    Assert Equals(GetCurpos(), [2, 5])
+    normal! u
+    Assert Equals(GetAllLines(), [''])
+    Assert Equals(GetCurpos(), [1, 1])
+  End
+
+  It doesn't create a undo block for newline removal.
+    set expandtab smarttab shiftwidth=2
+
+    let undo0 =<< trim END
+    if
+    endif
+    END
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('<ESC>')
+      \.run()
+    Assert Equals(GetAllLines(), undo0)
+    Assert Equals(GetCurpos(), [2, 1])
+    normal! u
+    Assert Equals(GetAllLines(), [''])
+    Assert Equals(GetCurpos(), [1, 1])
   End
 
   It clears temporal mappings properly.

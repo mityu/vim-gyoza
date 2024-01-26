@@ -1,4 +1,5 @@
 let s:rule_stack = []  " List of rules we should try.
+let s:curpos_after_newline = []
 
 let s:temporal_map_clearer =
   \ ['apply', 'check_state', 'do_input', 'setup_newline_removal']
@@ -53,7 +54,6 @@ function s:check_apply_state() abort
     " The latest applied rule matched all the requirements.  Clear the rules
     " stack, create newline, and remove all the temporal plugin mappings.
     let s:rule_stack = []
-    " TODO: Split undo sequence here?
     inoremap <buffer> <Plug>(_gyoza_do_input) <C-g>U<Up><C-g>U<End><CR>
     inoremap <buffer> <Plug>(_gyoza_setup_newline_removal)
       \ <Cmd>call <SID>setup_newline_removal()<CR>
@@ -78,10 +78,40 @@ endfunction
 function s:setup_newline_removal() abort
   augroup plugin-gyoza-applier
     autocmd!
-    autocmd TextChangedI,CursorMovedI <buffer> ++once
-      \ call s:cancel_removeing_newline()
+    autocmd CursorMovedI <buffer> ++once call s:invalidate_newline_removal()
     autocmd InsertLeave <buffer> ++once call s:remove_newline()
   augroup END
+  let s:curpos_after_newline = getcurpos()
+endfunction
+
+" Cancel newline removal operation.  Plus, make a new undo block for the pair
+" completion.
+function s:invalidate_newline_removal() abort
+  augroup plugin-gyoza-applier
+    autocmd!
+  augroup END
+
+  if line('.') != s:curpos_after_newline[1]
+    " Cursor moved to another line.  Give up making undo separation point.
+    let s:curpos_after_newline = []
+    return
+  endif
+
+  " Make a new undo block for the buffer state where just completed the pair.
+  " Remove the current line and restore the previous state, make a undo
+  " separation point, and lastly restore the buffer.
+  const curpos = getcurpos()
+  const curline = getline('.')
+  try
+    delete _
+    normal! $
+    let &g:undolevels = &g:undolevels
+    call setline('.', getline('.'))
+  finally
+    call append(line('.') - 1, curline)
+    call setpos('.', curpos)
+    let s:curpos_after_newline = []
+  endtry
 endfunction
 
 function s:remove_newline() abort
@@ -92,12 +122,6 @@ function s:remove_newline() abort
   if getline('.')->trim() ==# ''
     delete _
   endif
-endfunction
-
-function s:cancel_removeing_newline() abort
-  augroup plugin-gyoza-applier
-    autocmd!
-  augroup END
 endfunction
 
 function s:replace_termcode(keys) abort
