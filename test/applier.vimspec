@@ -13,6 +13,7 @@ Describe Applier class
     call test_override('char_avail', 1)
     let NewConfig = s:C.new_rule_stack
     filetype indent on
+    call gyoza#applier#set_callback_on_finish_applicant({-> 0})
   End
 
   After all
@@ -22,6 +23,7 @@ Describe Applier class
     unlet NewConfig
     delcommand ResetOptions
     filetype indent off
+    call gyoza#applier#set_callback_on_finish_applicant(v:null)
   End
 
   Before each
