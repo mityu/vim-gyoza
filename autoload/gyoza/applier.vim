@@ -90,6 +90,7 @@ function s:setup_newline_removal() abort
     \ 'curpos': getcurpos(),
     \ 'curline': getline('.'),
     \ 'line_count': line('$'),
+    \ 'undo_seq': undotree().seq_cur,
     \ }
   call call(s:callback_on_finish_applicant, [])
 endfunction
@@ -108,14 +109,16 @@ function s:invalidate_newline_removal() abort
   endif
 
   let prev_curline = s:state_after_newline.curpos[1]
+  let undo_seq = s:state_after_newline.undo_seq
 
   let s:state_after_newline = {}
   augroup plugin-gyoza-applier
     autocmd!
   augroup END
 
-  if line('.') != prev_curline
-    " Cursor moved to another line.  Give up making undo separation point.
+  if line('.') != prev_curline || undotree().seq_cur != undo_seq
+    " Cursor moved to another line or new undo block is made by user.  Give up
+    " making undo separation point.
     return
   endif
 

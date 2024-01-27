@@ -238,6 +238,44 @@ Describe Applier class
     Assert Equals(GetCurpos(), [1, 1])
   End
 
+  It doesn't create a new undo block after newline if user created it.
+    set expandtab smarttab shiftwidth=2
+
+    let undo0 =<< trim END
+    if
+      a
+    endif
+    END
+
+    let undo1 =<< trim END
+    if
+
+    endif
+    END
+    let undo1[1] = '  '
+
+    let undo2 = ['']
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), undo1)})
+      \.feedkeys('<C-g>ua')
+      \.call({-> s:assert.equals(GetAllLines(), undo0)})
+      \.feedkeys('<ESC>')
+      \.run()
+    Assert Equals(GetAllLines(), undo0)
+    Assert Equals(GetCurpos(), [2, 3])
+    normal! u
+    Assert Equals(GetAllLines(), undo1)
+    Assert Equals(GetCurpos(), [2, 2])
+    normal! u
+    Assert Equals(GetAllLines(), undo2)
+    Assert Equals(GetCurpos(), [1, 1])
+  End
+
   It clears temporal mappings properly.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
