@@ -1,11 +1,16 @@
 let s:rule_stack = []  " List of rules we should try.
-let s:curpos_after_newline = []
+let s:state_after_newline = {}  " Some cursor/buffer states after completing block.
+let s:callback_on_finish_applicant = v:null
 
 let s:temporal_map_clearer =
   \ ['apply', 'check_state', 'do_input', 'setup_newline_removal']
   \ ->map({-> printf("\<Cmd>iunmap <buffer> <Plug>(_gyoza_%s)\<CR>", v:val)})
   \ ->join('')
 
+
+function gyoza#applier#set_callback_on_finish_applicant(fn) abort
+  let s:callback_on_finish_applicant = a:fn
+endfunction
 
 function gyoza#applier#trigger_applicant(all_rules) abort
   const prevlinenr = prevnonblank(line('.') - 1)
@@ -14,6 +19,7 @@ function gyoza#applier#trigger_applicant(all_rules) abort
 
   " Do not apply rules when the next line has deeper indentation.
   if s:get_indent_width(getline(nextlinenr)) > s:get_indent_width(prevlinenr)
+    call call(s:callback_on_finish_applicant, [])
     return
   endif
 
@@ -29,6 +35,7 @@ endfunction
 
 function s:do_apply() abort
   if empty(s:rule_stack)
+    call call(s:callback_on_finish_applicant, [])
     return s:temporal_map_clearer
   endif
   const rule = s:rule_stack->remove(0)
@@ -78,22 +85,39 @@ endfunction
 function s:setup_newline_removal() abort
   augroup plugin-gyoza-applier
     autocmd!
-    autocmd CursorMovedI <buffer> ++once call s:invalidate_newline_removal()
+    autocmd CursorMovedI <buffer> call s:invalidate_newline_removal()
     autocmd InsertLeave <buffer> ++once call s:remove_newline()
   augroup END
-  let s:curpos_after_newline = getcurpos()
+  let s:state_after_newline = {
+    \ 'curpos': getcurpos(),
+    \ 'curline': getline('.'),
+    \ 'line_count': line('$'),
+    \ }
+  call call(s:callback_on_finish_applicant, [])
 endfunction
 
 " Cancel newline removal operation.  Plus, make a new undo block for the pair
 " completion.
 function s:invalidate_newline_removal() abort
+  " I don't know why but some CursorMovedI event may happen before leaving
+  " insert mode.  It seems buffer state is not mostly changed so check the
+  " buffer state and ignore this CursorMovedI event if the state is still
+  " same.
+  if s:state_after_newline.curpos == getcurpos() &&
+      \ s:state_after_newline.curline ==# getline('.') &&
+      \ s:state_after_newline.line_count == line('$')
+    return
+  endif
+
+  let prev_curline = s:state_after_newline.curpos[1]
+
+  let s:state_after_newline = {}
   augroup plugin-gyoza-applier
     autocmd!
   augroup END
 
-  if line('.') != s:curpos_after_newline[1]
+  if line('.') != prev_curline
     " Cursor moved to another line.  Give up making undo separation point.
-    let s:curpos_after_newline = []
     return
   endif
 
@@ -110,7 +134,6 @@ function s:invalidate_newline_removal() abort
   finally
     call append(line('.') - 1, curline)
     call setpos('.', curpos)
-    let s:curpos_after_newline = []
   endtry
 endfunction
 
@@ -118,6 +141,7 @@ function s:remove_newline() abort
   augroup plugin-gyoza-applier
     autocmd!
   augroup END
+  let s:state_after_newline = {}
 
   if getline('.')->trim() ==# ''
     delete _
