@@ -3,7 +3,7 @@ let s:state_after_newline = {}  " Some cursor/buffer states after completing blo
 let s:callback_on_finish_applicant = v:null
 
 let s:temporal_map_clearer =
-  \ ['apply', 'check_state', 'do_input', 'setup_newline_removal']
+  \ ['apply', 'check_state', 'do_input']
   \ ->map({-> printf("\<Cmd>iunmap <buffer> <Plug>(_gyoza_%s)\<CR>", v:val)})
   \ ->join('')
 
@@ -28,7 +28,6 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   imap <buffer> <silent> <expr> <Plug>(_gyoza_apply) <SID>do_apply()
   imap <buffer> <silent> <expr> <Plug>(_gyoza_check_state) <SID>check_apply_state()
   inoremap <buffer> <Plug>(_gyoza_do_input) <Nop>
-  inoremap <buffer> <Plug>(_gyoza_setup_newline_removal) <Nop>
 
   call feedkeys("\<Plug>(_gyoza_apply)", 'mi!')
 endfunction
@@ -62,10 +61,9 @@ function s:check_apply_state() abort
     " stack, create newline, and remove all the temporal plugin mappings.
     let s:rule_stack = []
     inoremap <buffer> <Plug>(_gyoza_do_input) <C-g>U<Up><C-g>U<End><CR>
-    inoremap <buffer> <Plug>(_gyoza_setup_newline_removal)
-      \ <Cmd>call <SID>setup_newline_removal()<CR>
-    return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_setup_newline_removal)"
+    return "\<Plug>(_gyoza_do_input)"
       \ . s:temporal_map_clearer
+      \ . "\<Cmd>call " . expand('<SID>') . "setup_newline_removal()\<CR>"
   endif
 endfunction
 
