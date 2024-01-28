@@ -276,6 +276,51 @@ Describe Applier class
     Assert Equals(GetCurpos(), [1, 1])
   End
 
+  It keeps text after cursor.
+    TODO not implemented yet.
+    " TODO: Is this behavior truely appriciated? Maybe this is needless?
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, 'iffoo')
+    call NewScripter()
+      \.feedkeys('^la<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfoo", 'endif'])})
+      \.run()
+  End
+
+  It doesn't complete pair if it's already at the tail of cursor.
+    TODO not implemented yet.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+
+    call setline(1, 'ifendif')
+    call NewScripter()
+      \.feedkeys('^la<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.run()
+  End
+
+  It doesn't complete pair if there's some "another pair"s like "else" for "if".
+    TODO not implemented yet
+    let lines =<< trim END
+    if
+    else
+    endif
+    END
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif', ['else'])._rules
+
+    call setline(1, lines)
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'else', 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.feedkeys('<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), lines)})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
+      \.run()
+  End
+
   It clears temporal mappings properly.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
