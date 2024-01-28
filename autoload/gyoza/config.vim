@@ -9,10 +9,27 @@ function s:clear_rules() dict abort
 endfunction
 let s:rule_stack.clear_rules = function('s:clear_rules')
 
-function s:add_rule(pattern, pair) dict abort
+function s:add_rule(pattern, pair, cancelers = []) dict abort
+  let canceler_literal = []
+  let canceler_regexp = []
+
+  for canceler in a:cancelers
+    if canceler =~# '^\\='
+      if strlen(canceler) > 2
+        call add(canceler_regexp, strpart(canceler, 2))
+      endif
+    else
+      if canceler !=# ''
+        call add(canceler_literal, canceler)
+      endif
+    endif
+  endfor
+
   call add(self._rules, #{
     \ pattern: a:pattern,
     \ pair: a:pair,
+    \ canceler_literal: canceler_literal,
+    \ canceler_regexp: canceler_regexp,
     \ })
   return self
 endfunction

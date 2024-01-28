@@ -84,5 +84,20 @@ Describe Rule stack class
     Assert LengthOf(c2._rules, 0)
   End
 
+  It classifies regex style cancelers and literal style cancelers.
+    let c = GetInstance()
+    call c.add_rule('c', 'c-pair', ['lit', '\=reg\s.*', 'lit2', '\\=lit', '\S-lit', 'aa\='])
+    Assert LengthOf(c._rules, 1)
+    Assert Equals(c._rules[0].canceler_literal, ['lit', 'lit2', '\\=lit', '\S-lit', 'aa\='])
+    Assert Equals(c._rules[0].canceler_regexp, ['reg\s.*'])
+  End
+
+  It ignores empty cancelers.
+    let c = GetInstance()
+    call c.add_rule('c', 'c-pair', ['', '\='])
+    Assert LengthOf(c._rules[0].canceler_literal, 0)
+    Assert LengthOf(c._rules[0].canceler_regexp, 0)
+  End
+
 End
 
