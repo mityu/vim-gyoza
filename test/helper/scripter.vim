@@ -11,7 +11,7 @@ endfunction
 let s:scripter = {
   \ '_script': [],
   \ '_fn_stack': [],
-  \ '_fn_consumer': v:none
+  \ '_fn_consumer': v:null
   \ }
 
 function s:scripter._init() abort
