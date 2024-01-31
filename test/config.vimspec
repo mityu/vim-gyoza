@@ -101,3 +101,29 @@ Describe Rule stack class
 
 End
 
+Describe gyoza#config#get_rules_for_filetype()
+  Before all
+    let GetAllRules = s:F.get_all_rules
+    let ClearAllRules = {-> filter(s:F.get_all_rules(), '0')}
+    let GetRules = {ft -> gyoza#config#get_rules_for_filetype(ft)}
+  End
+
+  After all
+    call ClearAllRules()
+    unlet GetAllRules
+    unlet ClearAllRules
+    unlet GetRules
+  End
+
+  Before each
+    call ClearAllRules()
+  End
+
+  It automatically adds rules stack for specified filetype.
+    let c = GetRules('vim')
+    Assert Empty(c._rules)
+    Assert LengthOf(GetAllRules(), 1)
+    Assert HasKey(GetAllRules(), 'vim')
+  End
+
+End

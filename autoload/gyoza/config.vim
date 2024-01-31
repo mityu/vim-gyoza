@@ -49,3 +49,15 @@ endfunction
 
 " Holds configurations for all functions
 let s:config = {}
+
+function gyoza#config#get_rules_for_filetype(filetype) abort
+  if !has_key(s:config, a:filetype)
+    let s:config[a:filetype] = s:new_rule_stack()
+  endif
+  return s:config[a:filetype]
+endfunction
+
+" For testing.
+function s:get_all_rules() abort
+  return s:config
+endfunction
