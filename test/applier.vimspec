@@ -112,6 +112,61 @@ Describe Applier class
       \.run()
   End
 
+  It handles indentation properly when using hardtabs in space-indented buffer.
+    set tabstop=2 shiftwidth=2 expandtab
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, ["\tif"])
+    call NewScripter()
+      \.feedkeys('o')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ["\tif", '    ', '  endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 5])})
+      \.run()
+  End
+
+  It handles indentation properly when using softtabs in hardtab-indented buffer.
+    set tabstop=2 shiftwidth=2
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, ['  if'])
+    call NewScripter()
+      \.feedkeys('o')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines())})
+  End
+
+  It handles indentation properly when using softtabs in hardtab-indented buffer.
+    set tabstop=4 shiftwidth=2
+  End
+
+  It cancel pair completion properly when using hardtabs in space-indented buffer.
+    set tabstop=2 shiftwidth=2
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, ['  if', '  endif'])
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), ['  if', "\t\t", '  endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
+      \.run()
+  End
+
+  It handles pair completion properly when using softtabs in hardtab-indented buffer.
+    set tabstop=2 shiftwidth=2 expandtab
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    let lines = map(['if', 'endif'], '"\t" . v:val')
+    call setline(1, lines)
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('')
+      \.call({-> s:assert.equals(GetAllLines(), insert(copy(lines), '    ', 1))})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 5])})
+      \.run()
+  End
+
   It doesn't complete pair when second newline.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
@@ -184,6 +239,84 @@ Describe Applier class
       \.feedkeys('<ESC>')
       \.call({-> s:assert.equals(GetAllLines(), ['if', '', '', 'endif'])})
       \.call({-> s:assert.equals(GetCurpos(), [3, 1])})
+      \.run()
+  End
+
+  It doesn't apply rule when canceler is on the next line (literal).
+    let lines =<< trim END
+    if
+    else
+    endif
+    END
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif', ['else'])._rules
+
+    call setline(1, lines)
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), insert(copy(lines), "\t", 1))})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.feedkeys('<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), flatten(insert(copy(lines), ['', "\t"], 1)))})
+      \.call({-> s:assert.equals(GetCurpos(), [3, 2])})
+      \.feedkeys('<ESC>')
+      \.run()
+  End
+
+  It doesn't apply rule when canceler is on the next line (regexp).
+    let lines =<< trim END
+    if
+    elseif condition
+    endif
+    END
+    call map(lines, '"\t" . v:val')  " Add an indentation.
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif', ['\=^elseif\>\s'])._rules
+
+    call setline(1, lines)
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), insert(copy(lines), "\t\t", 1))})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
+      \.feedkeys('<ESC>')
+      \.run()
+  End
+
+  It doesn't consider as valid canceler if indentation depth is different (literal).
+    let lines =<< trim END
+    if foo
+      else
+    END
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif', ['else'])._rules
+
+    set expandtab smarttab shiftwidth=2
+    call setline(1, lines)
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), insert(copy(lines), "  ", 1))})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
+      \.run()
+  End
+
+  It doesn't consider as valid canceler if indentation depth is different (regexp).
+    let lines =<< trim END
+    if cond1
+      elseif cond2
+    END
+
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif', ['\=^elseif\>\s'])._rules
+
+    set expandtab smarttab shiftwidth=2
+    call setline(1, lines)
+    call NewScripter()
+      \.feedkeys('ggo')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), insert(copy(lines), "  ", 1))})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
       \.run()
   End
 
@@ -296,28 +429,6 @@ Describe Applier class
       \.feedkeys('^la<CR>')
       \.call({-> gyoza#applier#trigger_applicant(rules)})
       \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
-      \.run()
-  End
-
-  It doesn't complete pair if there's some "another pair"s like "else" for "if".
-    TODO not implemented yet
-    let lines =<< trim END
-    if
-    else
-    endif
-    END
-
-    let rules = NewConfig().add_rule('^\s*if\>', 'endif', ['else'])._rules
-
-    call setline(1, lines)
-    call NewScripter()
-      \.feedkeys('ggo')
-      \.call({-> gyoza#applier#trigger_applicant(rules)})
-      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'else', 'endif'])})
-      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
-      \.feedkeys('<CR>')
-      \.call({-> s:assert.equals(GetAllLines(), lines)})
-      \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
       \.run()
   End
 

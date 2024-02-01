@@ -1,4 +1,5 @@
 let s:rule_stack = []  " List of rules we should try.
+let s:current_rule = {}  " Currently applied rule.
 let s:state_after_newline = {}  " Some cursor/buffer states after completing block.
 let s:callback_on_finish_applicant = v:null
 
@@ -37,9 +38,9 @@ function s:do_apply() abort
     call call(s:callback_on_finish_applicant, [])
     return s:temporal_map_clearer
   endif
-  const rule = s:rule_stack->remove(0)
+  let s:current_rule = s:rule_stack->remove(0)
 
-  execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' rule.pair
+  execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' s:current_rule.pair
 
   " I don't know why but the last input character will be disappared without
   " <Ignore> between these two mappings.
@@ -49,11 +50,12 @@ endfunction
 function s:check_apply_state() abort
   const curline = getline('.')
   const nextline = getline(nextnonblank(line('.') + 1))
+  const nextline_text = trim(nextline)
 
   if s:get_indent_width(curline) == s:get_indent_width(nextline) &&
-      \ trim(curline) ==# trim(nextline)
-    " Currently applied rule does not matches the requirements.  Remove the
-    " pair temporally inserted and re-try other rules.
+      \ (trim(curline) ==# nextline_text || s:should_skip_rule(nextline_text))
+    " Currently applied rule does not match the requirements.  Remove the pair
+    " temporally inserted and re-try other rules.
     inoremap <buffer> <Plug>(_gyoza_do_input) <C-u>
     return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_apply)"
   else
@@ -65,6 +67,20 @@ function s:check_apply_state() abort
       \ . s:temporal_map_clearer
       \ . "\<Cmd>call " . expand('<SID>') . "setup_newline_removal()\<CR>"
   endif
+endfunction
+
+function s:should_skip_rule(text) abort
+  if index(s:current_rule.canceler_literal, a:text) != -1
+    return v:true
+  endif
+
+  for p in s:current_rule.canceler_regexp
+    if a:text =~# p
+      return v:true
+    endif
+  endfor
+
+  return v:false
 endfunction
 
 " When user left insert mode just after newline, remove the current line.
@@ -123,8 +139,8 @@ function s:invalidate_newline_removal() abort
   endif
 
   " Make a new undo block for the buffer state where just completed the pair.
-  " Remove the current line and restore the previous state, make a undo
-  " separation point, and lastly restore the buffer.
+  " Firstly remove the current line and restore the previous buffer state,
+  " then make a undo separation point, and lastly restore the buffer.
   const curpos = getcurpos()
   const curline = getline('.')
   try
