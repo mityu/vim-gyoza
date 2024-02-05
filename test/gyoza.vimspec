@@ -1,0 +1,139 @@
+let s:assert = themis#helper('assert')
+call themis#helper('command').with(s:assert)
+call themis#func_alias(s:assert)
+
+Describe gyoza.vim ingetration test
+  Before all
+    let PickPatterns = {rules -> map(deepcopy(rules), 'v:val.pattern')}
+    call test_override('char_avail', 1)
+    filetype indent on
+  End
+
+  After all
+    %bwipeout!
+    filetype indent off
+    call test_override('char_avail', 0)
+    call gyoza#disable()
+    unlet PickPatterns
+  End
+
+  Before each
+    %bwipeout!
+    set filetype=vim
+    call gyoza#config#get_rules_for_filetype('vim').clear_rules()
+    call gyoza#enable()  " To initialize state
+  End
+
+  It is a validation.
+    " Check for the auto indentation.
+    Feedkeys iif foo<CR>aaa<CR>endif<ESC>
+    Assert Equals(GetAllLines(), ['if foo', "\taaa", 'endif'])
+  End
+
+  It completes pair.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.run()
+  End
+
+  It completes pair with indentation.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call NewScripter()
+      \.feedkeys('i<Tab>if<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), map(['if', "\t", 'endif'], '"\t" . v:val'))})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 3])})
+      \.run()
+  End
+
+  It removes newline.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
+      \.run()
+  End
+
+  It doesn't remove newline when type some characters after newline.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.feedkeys('abc')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tabc", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 5])})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tabc", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 4])})
+      \.run()
+  End
+
+  It doesn't add new pair after second <CR>.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.feedkeys('<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', '', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [3, 2])})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', '', '', 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [3, 1])})
+      \.run()
+  End
+
+  It keeps original rules valid after applicant.
+    let lines1 =<< trim END
+    if
+    endif
+    while
+
+    endwhile
+    END
+    let lines1[3] = "\t"
+
+    let lines2 =<< trim END
+    if
+    endif
+    while
+    endwhile
+    END
+
+    call gyoza#config#get_rules_for_filetype('vim')
+      \.add_rule('^\s*if\>', 'endif')
+      \.add_rule('^\s*while\>', 'endwhile')
+    call NewScripter()
+      \.feedkeys('iif<CR><ESC>Gowhile<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), lines1)})
+      \.call({-> s:assert.equals(GetCurpos(), [4, 2])})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetAllLines(), lines2)})
+      \.call({-> s:assert.equals(GetCurpos(), [4, 1])})
+      \.run()
+
+    let rules = gyoza#config#get_rules_for_filetype('vim')._rules
+    Assert LengthOf(rules, 2)
+    Assert Equals(PickPatterns(rules), ['^\s*if\>', '^\s*while\>'])
+  End
+
+  It uses not only filetype specific rules but also generic rules.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call gyoza#config#get_rules_for_filetype('_').add_rule('^\s*while\>', 'endwhile')
+    Feedkeys iwhile<CR><ESC>
+    Assert Equals(GetAllLines(), ['while', 'endwhile'])
+  End
+
+  It prefer using filetype specific rules to generic rules.
+    call gyoza#config#get_rules_for_filetype('vim').add_rule('^\s*if\>', 'endif')
+    call gyoza#config#get_rules_for_filetype('_').add_rule('^\s*if\>', 'bad-pair')
+    Feedkeys iif<CR><ESC>
+    Assert Equals(GetAllLines(), ['if', 'endif'])
+  End
+
+End
