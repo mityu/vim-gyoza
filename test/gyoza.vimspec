@@ -136,4 +136,25 @@ Describe gyoza.vim ingetration test
     Assert Equals(GetAllLines(), ['if', 'endif'])
   End
 
+  It do nothing when it is disabled for the current buffer.
+    call gyoza#disable_for_buffer()
+    call gyoza#config#get_rules_for_filetype('vim')
+      \.add_rule('^\s*if\>', 'endif')
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t"])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.feedkeys('<ESC>')
+      \.call({-> s:assert.equals(GetCurpos(), [2, 1])})
+      \.run()
+    call gyoza#enable_for_buffer()
+    %delete _
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+      \.feedkeys('<ESC>')
+      \.run()
+  End
+
 End

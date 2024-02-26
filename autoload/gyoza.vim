@@ -8,8 +8,18 @@ function gyoza#disable() abort
   call gyoza#observer#disable()
 endfunction
 
+function gyoza#enable_for_buffer() abort
+  let b:gyoza_enable = 1
+  let s:skip_applicant = v:false
+endfunction
+
+function gyoza#disable_for_buffer() abort
+  let b:gyoza_enable = 0
+  let s:skip_applicant = v:false
+endfunction
+
 function s:trigger_applicant() abort
-  if !s:skip_applicant
+  if !s:skip_applicant && get(b:, 'gyoza_enable', 1)
     let s:skip_applicant = v:true
     let rules =
       \ gyoza#config#get_rules_for_filetype(&l:filetype)._rules +
