@@ -9,6 +9,12 @@ for s:f in split(glob(expand('<sfile>:h') . '/helper/*.vim'), "\n")
 endfor
 unlet s:f
 
+call themis#helper('deps').git('mityu/vim-themis-helper-scripter')
+
+function NewScripter() abort
+  return themis#helper('scripter').new().set_auto_replace_termcodes(1)
+endfunction
+
 function ScriptFuncs(path) abort
   let V = vital#themis#import('Vim.ScriptLocal')
   let sid = V.sid(a:path)

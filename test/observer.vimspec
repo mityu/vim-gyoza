@@ -35,7 +35,11 @@ Describe Helper program test
 
     It can handle TextChangedI event.
       autocmd test-gyoza TextChangedI * call append('$', 'appended')
-      Feedkeys ia<Cmd>Assert Equals(GetAllLines(), ['a', 'appended'])<CR><ESC>
+      call NewScripter()
+        \.feedkeys('ia')
+        \.call({-> s:assert.equals(GetAllLines(), ['a', 'appended'])})
+        \.feedkeys('<ESC>')
+        \.run()
     End
 
     It can handle TextChanged event.
@@ -46,51 +50,6 @@ Describe Helper program test
       Assert True(g:textChangedHandled)
       unlet g:textChangedHandled
     End
-  End
-
-  Context "scripter" helper module
-    It's feedkey() can stay insert-mode and leave it later.
-      let lines =<< trim END
-      a
-      appended
-      END
-
-      augroup test-gyoza
-        autocmd!
-        autocmd TextChangedI * call append('$', 'appended')
-      augroup END
-
-      call NewScripter()
-        \.call({-> s:assert.equals(GetAllLines(), [''])})
-        \.feedkeys('ia')
-        \.call({-> s:assert.equals(mode(), 'i')})
-        \.call({-> s:assert.equals(GetAllLines(), lines)})
-        \.feedkeys('<ESC>')
-        \.call({-> s:assert.equals(mode(), 'n')})
-        \.call({-> s:assert.equals(GetAllLines(), lines)})
-        \.run()
-
-      autocmd! test-gyoza
-      augroup! test-gyoza
-    End
-
-    It's .feedkeys_remap() consider user defined mappings.
-      inoremap @ (at)
-      call NewScripter()
-        \.feedkeys('ia')
-        \.call({-> s:assert.equals(mode(), 'i')})
-        \.call({-> s:assert.equals(getline('.'), 'a')})
-        \.feedkeys_remap('b')
-        \.call({-> s:assert.equals(mode(), 'i')})
-        \.call({-> s:assert.equals(getline('.'), 'ab')})
-        \.feedkeys_remap('@')
-        \.call({-> s:assert.equals(mode(), 'i')})
-        \.call({-> s:assert.equals(getline('.'), 'ab(at)')})
-        \.feedkeys('<ESC>')
-        \.run()
-      iunmap @
-    End
-
   End
 
 End
