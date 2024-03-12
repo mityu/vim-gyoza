@@ -3,12 +3,6 @@ let s:current_rule = {}  " Currently applied rule.
 let s:state_after_newline = {}  " Some cursor/buffer states after completing block.
 let s:callback_on_finish_applicant = v:null
 
-let s:temporal_map_clearer =
-  \ ['apply', 'check_state', 'do_input']
-  \ ->map({-> printf("\<Cmd>iunmap <buffer> <Plug>(_gyoza_%s)\<CR>", v:val)})
-  \ ->join('')
-
-
 function gyoza#applier#set_callback_on_finish_applicant(fn) abort
   let s:callback_on_finish_applicant = a:fn
 endfunction
@@ -29,6 +23,10 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   imap <buffer> <silent> <expr> <Plug>(_gyoza_apply) <SID>do_apply()
   imap <buffer> <silent> <expr> <Plug>(_gyoza_check_state) <SID>check_apply_state()
   inoremap <buffer> <Plug>(_gyoza_do_input) <Nop>
+  inoremap <buffer> <expr> <Plug>(_gyoza_setup_newline_removal)
+    \ <SID>setup_newline_removal()
+  inoremap <buffer> <expr> <Plug>(_gyoza_clear_temporal_mappings)
+    \ <SID>clear_temporal_mappings()
 
   call feedkeys("\<Plug>(_gyoza_apply)", 'mi!')
 endfunction
@@ -36,7 +34,7 @@ endfunction
 function s:do_apply() abort
   if empty(s:rule_stack)
     call call(s:callback_on_finish_applicant, [])
-    return s:temporal_map_clearer
+    return "\<Plug>(_gyoza_clear_temporal_mappings)"
   endif
   let s:current_rule = s:rule_stack->remove(0)
 
@@ -63,9 +61,8 @@ function s:check_apply_state() abort
     " stack, create newline, and remove all the temporal plugin mappings.
     let s:rule_stack = []
     inoremap <buffer> <Plug>(_gyoza_do_input) <C-g>U<Up><C-g>U<End><CR>
-    return "\<Plug>(_gyoza_do_input)"
-      \ . s:temporal_map_clearer
-      \ . "\<Cmd>call " . expand('<SID>') . "setup_newline_removal()\<CR>"
+    return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_setup_newline_removal)"
+      \ . "\<Plug>(_gyoza_clear_temporal_mappings)"
   endif
 endfunction
 
@@ -109,6 +106,7 @@ function s:setup_newline_removal() abort
     \ 'undo_seq': undotree().seq_cur,
     \ }
   call call(s:callback_on_finish_applicant, [])
+  return ''
 endfunction
 
 " Cancel newline removal operation.  Plus, make a new undo block for the pair
@@ -163,6 +161,15 @@ function s:remove_newline() abort
   if getline('.')->trim() ==# ''
     delete _
   endif
+endfunction
+
+function s:clear_temporal_mappings() abort
+  iunmap <buffer> <Plug>(_gyoza_apply)
+  iunmap <buffer> <Plug>(_gyoza_check_state)
+  iunmap <buffer> <Plug>(_gyoza_do_input)
+  iunmap <buffer> <Plug>(_gyoza_setup_newline_removal)
+  iunmap <buffer> <Plug>(_gyoza_clear_temporal_mappings)
+  return ''
 endfunction
 
 function s:replace_termcode(keys) abort
