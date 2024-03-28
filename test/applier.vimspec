@@ -434,6 +434,25 @@ Describe Applier class
       \.run()
   End
 
+  It completes pair when block is nested.
+    let rules = NewConfig()
+      \.add_rule('^\s*if\>', 'endif')
+      \.add_rule('^\s*for\>', 'endfor')
+      \._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.feedkeys('for<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfor", "\t\t", "\tendfor", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [3, 3])})
+      \.feedkeys('if<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetCurpos(), [4, 4])})
+      \.call({-> s:assert.equals(getline(3, 5), ["\t\tif", "\t\t\t", "\t\tendif"])})
+      \.run()
+  End
+
   It clears temporal mappings properly.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
