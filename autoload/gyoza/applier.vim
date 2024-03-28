@@ -1,3 +1,4 @@
+let s:cursor_text = ''  " The text after cursor.
 let s:rule_stack = []  " List of rules we should try.
 let s:current_rule = {}  " Currently applied rule.
 let s:state_after_newline = {}  " Some cursor/buffer states after completing block.
@@ -19,6 +20,7 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   endif
 
   let s:rule_stack = a:all_rules->copy()->filter('prevline =~# v:val.pattern')
+  let s:cursor_text = getline('.')[col('.') - 1 :]
 
   imap <buffer> <silent> <expr> <Plug>(_gyoza_apply) <SID>do_apply()
   imap <buffer> <silent> <expr> <Plug>(_gyoza_check_state) <SID>check_apply_state()
@@ -28,7 +30,11 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   inoremap <buffer> <expr> <Plug>(_gyoza_clear_temporal_mappings)
     \ <SID>clear_temporal_mappings()
 
-  call feedkeys("\<Plug>(_gyoza_apply)", 'mi!')
+  let keys = "\<Plug>(_gyoza_apply)"
+  if s:cursor_text !=# ''
+    let keys = repeat("\<Del>", strchars(s:cursor_text)) .. keys
+  endif
+  call feedkeys(keys, 'mi!')
 endfunction
 
 function s:do_apply() abort
@@ -60,9 +66,14 @@ function s:check_apply_state() abort
     " The latest applied rule matched all the requirements.  Clear the rules
     " stack, create newline, and remove all the temporal plugin mappings.
     let s:rule_stack = []
-    inoremap <buffer> <Plug>(_gyoza_do_input) <C-g>U<Up><C-g>U<End><CR>
+    let rhs_do_input = '<C-g>U<Up><C-g>U<End><CR>'
+    if s:cursor_text !=# ''
+      let rhs_do_input ..= s:cursor_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
+    endif
+
+    execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' rhs_do_input
     return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_setup_newline_removal)"
-      \ . "\<Plug>(_gyoza_clear_temporal_mappings)"
+      \ .. "\<Plug>(_gyoza_clear_temporal_mappings)"
   endif
 endfunction
 
