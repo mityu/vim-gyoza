@@ -30,11 +30,16 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   inoremap <buffer> <expr> <Plug>(_gyoza_clear_temporal_mappings)
     \ <SID>clear_temporal_mappings()
 
-  let keys = "\<Plug>(_gyoza_apply)"
-  if s:cursor_text !=# ''
-    let keys = repeat("\<Del>", strchars(s:cursor_text)) .. keys
+  if s:cursor_text ==# ''
+    inoremap <buffer> <Plug>(_gyoza_restore_cursor_text) <Nop>
+    inoremap <buffer> <Plug>(_gyoza_remove_cursor_text) <Nop>
+  else
+    execute 'inoremap <buffer> <silent> <Plug>(_gyoza_restore_cursor_text)'
+      \ s:cursor_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
+    execute 'inoremap <buffer> <silent> <Plug>(_gyoza_remove_cursor_text)'
+      \ repeat('<Del>', strchars(s:cursor_text))
   endif
-  call feedkeys(keys, 'mi!')
+  call feedkeys("\<Plug>(_gyoza_apply)", 'mi!')
 endfunction
 
 function s:do_apply() abort
@@ -44,11 +49,58 @@ function s:do_apply() abort
   endif
   let s:current_rule = s:rule_stack->remove(0)
 
+  if type(s:current_rule.pair) == v:t_func
+    const prevline = getline(prevnonblank(line('.') - 1))
+    const nextline = getline(nextnonblank(line('.') + 1))
+    const curline = getline('.')[col('.') - 1 :]
+    const config = call(s:current_rule.pair, [{
+      \ 'previous': prevline,
+      \ 'current': curline,
+      \ 'next': nextline,
+      \}])
+
+    const skip = get(config, 'skip', '')
+    if skip ==# 'all'
+      call call(s:callback_on_finish_applicant, [])
+      return "\<Plug>(_gyoza_clear_temporal_mappings)"
+    elseif skip ==# 'this'
+      return "\<Plug>(_gyoza_apply)"
+    endif
+
+    if !has_key(config, 'pair')
+      echohl ErrorMsg
+      echomsg '[gyoza] "pair" or "skip" is required.'
+        \ .. ' See :h gyoza-rule-stack-add_rule-functional-pair for the details.'
+      echohl NONE
+      call call(s:callback_on_finish_applicant, [])
+      return "\<Plug>(_gyoza_clear_temporal_mappings)"
+    endif
+
+    let s:current_rule.pair = config.pair
+
+    if has_key(config, 'cancelers')
+      for c in config.cancelers
+        if c =~# '^\\='
+          if strlen(c) > 2
+            call add(s:current_rule.canceler_regexp, c[2 :])
+          endif
+        else
+          call add(s:current_rule.canceler_literal, c)
+        endif
+      endfor
+    endif
+
+    if has_key(config, 'cursor_text')
+      let s:current_rule.cursor_text = config.cursor_text
+    endif
+  endif
+
   execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' s:current_rule.pair
 
   " I don't know why but the last input character will be disappared without
   " <Ignore> between these two mappings.
-  return "\<Plug>(_gyoza_do_input)\<Ignore>\<Plug>(_gyoza_check_state)"
+  return "\<Plug>(_gyoza_remove_cursor_text)\<Plug>(_gyoza_do_input)" ..
+    \ "\<Ignore>\<Plug>(_gyoza_check_state)"
 endfunction
 
 function s:check_apply_state() abort
@@ -61,19 +113,23 @@ function s:check_apply_state() abort
     " Currently applied rule does not match the requirements.  Remove the pair
     " temporally inserted and re-try other rules.
     inoremap <buffer> <Plug>(_gyoza_do_input) <C-u>
-    return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_apply)"
+    return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_restore_cursor_text)\<Plug>(_gyoza_apply)"
   else
     " The latest applied rule matched all the requirements.  Clear the rules
     " stack, create newline, and remove all the temporal plugin mappings.
     let s:rule_stack = []
+
+    if has_key(s:current_rule, 'cursor_text')
+      let s:cursor_text = s:current_rule.cursor_text
+    endif
     let rhs_do_input = '<C-g>U<Up><C-g>U<End><CR>'
     if s:cursor_text !=# ''
       let rhs_do_input ..= s:cursor_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
     endif
 
     execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' rhs_do_input
-    return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_setup_newline_removal)"
-      \ .. "\<Plug>(_gyoza_clear_temporal_mappings)"
+    return "\<Plug>(_gyoza_do_input)\<Plug>(_gyoza_setup_newline_removal)" ..
+      \ "\<Plug>(_gyoza_clear_temporal_mappings)"
   endif
 endfunction
 
@@ -179,6 +235,8 @@ function s:clear_temporal_mappings() abort
   iunmap <buffer> <Plug>(_gyoza_check_state)
   iunmap <buffer> <Plug>(_gyoza_do_input)
   iunmap <buffer> <Plug>(_gyoza_setup_newline_removal)
+  iunmap <buffer> <Plug>(_gyoza_remove_cursor_text)
+  iunmap <buffer> <Plug>(_gyoza_restore_cursor_text)
   iunmap <buffer> <Plug>(_gyoza_clear_temporal_mappings)
   return ''
 endfunction

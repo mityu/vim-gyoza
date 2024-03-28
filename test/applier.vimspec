@@ -445,4 +445,100 @@ Describe Applier class
     Assert Equals(maps, ['No mapping found'])
   End
 
+  Context when {pair} is a function
+    It calls {pair} to get pair text.
+      let rules = NewConfig().add_rule('^\s*if\>', {_ -> {'pair': 'endif'}})._rules
+      call NewScripter()
+        \.feedkeys('iif<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'endif'])})
+        \.run()
+    End
+
+    It skips a rule application.
+      " The first rule should be skipped.
+      let rules = NewConfig()
+        \.add_rule('^\s*while\>', {_ -> {'skip': 'this', 'pair': 'end'}})
+        \.add_rule('^\s*while\>', {_ -> {'pair': 'endwhile'}})
+        \._rules
+      call NewScripter()
+        \.feedkeys('iwhile<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['while', "\t", 'endwhile'])})
+        \.run()
+    End
+
+    It skips the all rules application.
+      " All the rules should be skipped.
+      let rules = NewConfig()
+        \.add_rule('^\s*while\>', {_ -> {'skip': 'all', 'pair': 'end'}})
+        \.add_rule('^\s*while\>', {_ -> {'pair': 'endwhile'}})
+        \._rules
+      call NewScripter()
+        \.feedkeys('iwhile<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['while', "\t"])})
+        \.run()
+    End
+
+    It can change the cursor line text.
+      let rules = NewConfig()
+        \.add_rule('^\s*if\>', {_ -> {'pair': 'endif', 'cursor_text': 'expr'}})
+        \._rules
+      call NewScripter()
+        \.feedkeys('iif<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['if', "\texpr", 'endif'])})
+        \.run()
+    End
+
+    It can add literal cancelers.
+      let rules = NewConfig()
+        \.add_rule('^\s*if\>', {_ -> {'pair': 'endif', 'cancelers': ['else']}})
+        \._rules
+      call setline(1, ['if', 'else'])
+      call NewScripter()
+        \.feedkeys('ggo')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'else'])})
+        \.run()
+    End
+
+    It can add regexp cancelers.
+      let rules = NewConfig()
+        \.add_rule('^\s*if\>', {_ -> {'pair': 'endif', 'cancelers': ['\=^\s*elseif\>']}})
+        \._rules
+      call setline(1, ['if', 'elseif foo'])
+      call NewScripter()
+        \.feedkeys('ggo')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['if', "\t", 'elseif foo'])})
+        \.run()
+    End
+
+    It calls {pair} with buffer state unchanged.
+      let call_count = []
+      let l:PairFunc = {retval, line -> [
+        \ add(call_count, 1),
+        \ s:assert.equals(GetAllLines(), ['if', "\tfoo"]),
+        \ s:assert.equals(GetCurpos(), [2, 2]),
+        \ retval,
+        \][-1]}
+      let rules = NewConfig()
+        \.add_rule('^\s*if\>', funcref(l:PairFunc, [{'skip': 'this'}]))
+        \.add_rule('^\s*if\>', funcref(l:PairFunc, [{'skip': 'this'}]))
+        \.add_rule('^\s*if\>', funcref(l:PairFunc, [{'pair': 'endif'}]))
+        \._rules
+      call setline(1, 'iffoo')
+      call NewScripter()
+        \.feedkeys('^la<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfoo", 'endif'])})
+        \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
+        \.run()
+      Assert LengthOf(call_count, 3)
+    End
+
+  End
+
 End
