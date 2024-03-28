@@ -1,6 +1,6 @@
 " Holds configurations for one filetype
-let s:rule_stack = #{
-  \ _rules: [],
+let s:rule_stack = {
+  \ '_rules': [],
   \}
 
 function s:clear_rules() dict abort
@@ -25,11 +25,11 @@ function s:add_rule(pattern, pair, cancelers = []) dict abort
     endif
   endfor
 
-  call add(self._rules, #{
-    \ pattern: a:pattern,
-    \ pair: a:pair,
-    \ canceler_literal: canceler_literal,
-    \ canceler_regexp: canceler_regexp,
+  call add(self._rules, {
+    \ 'pattern': a:pattern,
+    \ 'pair': a:pair,
+    \ 'canceler_literal': canceler_literal,
+    \ 'canceler_regexp': canceler_regexp,
     \ })
   return self
 endfunction
