@@ -157,4 +157,93 @@ Describe gyoza.vim ingetration test
       \.run()
   End
 
+  It can undo step by step.
+    Skip This test is useless since TextChanged event is not triggered on testing.
+    set expandtab smarttab shiftwidth=2
+
+    let undo0 =<< trim END
+    if
+      aaaa
+    endif
+    END
+
+    let undo1 =<< trim END
+    if
+    endif
+    END
+
+    call gyoza#config#get_rules_for_filetype('vim')
+      \.add_rule('^\s*if\>', 'endif')
+
+    Feedkeys iif<CR>aaaa<ESC>
+
+    Assert Equals(GetAllLines(), undo0)
+    Assert Equals(GetCurpos(), [2, 6])
+    normal! u
+    Assert Equals(GetAllLines(), undo1)
+    Assert Equals(GetCurpos(), [2, 5])
+    normal! u
+    Assert Equals(GetAllLines(), [''])
+    Assert Equals(GetCurpos(), [1, 1])
+  End
+
+  It doesn't create a undo block for newline removal.
+    Skip This test is useless since TextChanged event is not triggered on testing.
+    set expandtab smarttab shiftwidth=2
+
+    let undo0 =<< trim END
+    if
+    endif
+    END
+
+    call gyoza#config#get_rules_for_filetype('vim')
+      \.add_rule('^\s*if\>', 'endif')
+    Feedkeys iif<CR><ESC>
+
+    Assert Equals(GetAllLines(), undo0)
+    Assert Equals(GetCurpos(), [2, 1])
+    normal! u
+    Assert Equals(GetAllLines(), [''])
+    Assert Equals(GetCurpos(), [1, 1])
+  End
+
+  It doesn't create a new undo block after newline if user created it.
+    Skip This test is useless since TextChanged event is not triggered on testing.
+    set expandtab smarttab shiftwidth=2
+
+    let undo0 =<< trim END
+    if
+      a
+    endif
+    END
+
+    let undo1 =<< trim END
+    if
+
+    endif
+    END
+    let undo1[1] = '  '
+
+    let undo2 = ['']
+
+    call gyoza#config#get_rules_for_filetype('vim')
+      \.add_rule('^\s*if\>', 'endif')
+
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> s:assert.equals(GetAllLines(), undo1)})
+      \.feedkeys('<C-g>ua')
+      \.call({-> s:assert.equals(GetAllLines(), undo0)})
+      \.feedkeys('<ESC>')
+      \.run()
+    Assert Equals(GetAllLines(), undo0)
+    Assert Equals(GetCurpos(), [2, 3])
+    normal! u
+    Assert Equals(GetAllLines(), undo1)
+    Assert Equals(GetCurpos(), [2, 2])
+    normal! u
+    Assert Equals(GetAllLines(), undo2)
+    Assert Equals(GetCurpos(), [1, 1])
+  End
+
 End

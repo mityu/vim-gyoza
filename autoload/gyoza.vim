@@ -30,6 +30,7 @@ endfunction
 
 function s:on_finish_applicant() abort
   let s:skip_applicant = v:false
+  call gyoza#observer#update_context()
 endfunction
 
 call gyoza#observer#set_callback_on_trigger_applicant(function('s:trigger_applicant'))
