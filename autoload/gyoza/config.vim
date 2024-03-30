@@ -57,6 +57,19 @@ function gyoza#config#get_rules_for_filetype(filetype) abort
   return s:config[a:filetype]
 endfunction
 
+let s:loaded_filetypes = {}
+function gyoza#config#load_rules_for_filetype(filetype, force_reload = 0) abort
+  if has_key(s:loaded_filetypes, a:filetype)
+    if a:force_reload
+      call gyoza#config#get_rules_for_filetype(a:filetype).clear_rules()
+    else
+      return
+    endif
+  endif
+  let s:loaded_filetypes[a:filetype] = 1
+  execute 'runtime! gyoza/' .. a:filetype .. '.vim'
+endfunction
+
 " For testing.
 function s:get_all_rules() abort
   return s:config

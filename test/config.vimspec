@@ -127,3 +127,36 @@ Describe gyoza#config#get_rules_for_filetype()
   End
 
 End
+
+Describe gyoza#config#load_rules_for_filetype()
+  Before all
+    let runtimepath_save = &runtimepath
+    set runtimepath+=test/test-runtime
+    call themis#log(&runtimepath)
+  End
+
+  After all
+    call filter(s:F.get_all_rules(), '0')  " Clear all the rules.
+    let &runtimepath = runtimepath_save
+  End
+
+  It sources gyoza/{filetype}.vim and cache defined rules.
+    let g:sourced_count = 0
+
+    " Source script at the first call.
+    call gyoza#config#load_rules_for_filetype('vim')
+    Assert Equals(g:sourced_count, 1)
+    Assert LengthOf(gyoza#config#get_rules_for_filetype('vim')._rules, 1)
+
+    " Do not sourced script at secondly call.
+    call gyoza#config#load_rules_for_filetype('vim')
+    Assert Equals(g:sourced_count, 1)
+    Assert LengthOf(gyoza#config#get_rules_for_filetype('vim')._rules, 1)
+
+    " Source script again when {force_reload} is set but do not append rules.
+    call gyoza#config#load_rules_for_filetype('vim', 1)
+    Assert Equals(g:sourced_count, 2)
+    Assert LengthOf(gyoza#config#get_rules_for_filetype('vim')._rules, 1)
+  End
+
+End
