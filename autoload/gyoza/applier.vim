@@ -34,8 +34,9 @@ function gyoza#applier#trigger_applicant(all_rules) abort
     inoremap <buffer> <Plug>(_gyoza_restore_cursor_text) <Nop>
     inoremap <buffer> <Plug>(_gyoza_remove_cursor_text) <Nop>
   else
+    const restore_text = s:cursor_text->substitute('|', '<bar>', 'g')
     execute 'inoremap <buffer> <silent> <Plug>(_gyoza_restore_cursor_text)'
-      \ s:cursor_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
+      \ restore_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
     execute 'inoremap <buffer> <silent> <Plug>(_gyoza_remove_cursor_text)'
       \ repeat('<Del>', strchars(s:cursor_text))
   endif
@@ -124,7 +125,8 @@ function s:check_apply_state() abort
     endif
     let rhs_do_input = '<C-g>U<Up><C-g>U<End><CR>'
     if s:cursor_text !=# ''
-      let rhs_do_input ..= s:cursor_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
+      const restore_text = s:cursor_text->substitute('|', '<bar>', 'g')
+      let rhs_do_input ..= restore_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
     endif
 
     execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' rhs_do_input

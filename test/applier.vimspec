@@ -453,6 +453,17 @@ Describe Applier class
       \.run()
   End
 
+  It works well even when cursor text has "|".
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, 'ifx|xxx')
+    call cursor(1, 1)
+    call NewScripter()
+      \.feedkeys('la<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tx|xxx", 'endif'])})
+      \.run()
+  End
+
   It clears temporal mappings properly.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
