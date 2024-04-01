@@ -4,6 +4,7 @@ call themis#func_alias(s:assert)
 
 Describe gyoza.vim ingetration test
   Before all
+    runtime autoload/gyoza.vim  " Reset callback.
     let PickPatterns = {rules -> map(deepcopy(rules), 'v:val.pattern')}
     call test_override('char_avail', 1)
     filetype indent on
@@ -21,6 +22,7 @@ Describe gyoza.vim ingetration test
     %bwipeout!
     set filetype=vim
     call gyoza#config#get_rules_for_filetype('vim').clear_rules()
+    call gyoza#config#get_rules_for_filetype('_').clear_rules()
     call gyoza#enable()  " To initialize state
   End
 
