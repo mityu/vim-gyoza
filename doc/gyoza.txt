@@ -1,0 +1,415 @@
+*gyoza.txt*		Auto pair completion on newline.
+
+Author: mityu
+License: MIT License
+==============================================================================
+CONTENTS						*gyoza-contents*
+
+INTRODUCTION					|gyoza-introduction|
+REQUIREMENTS					|gyoza-requirements|
+INTERFACE					|gyoza-interface|
+  FUNCTIONS					|gyoza-functions|
+  RULE STACK FUNCTIONS				|gyoza-rule-stack-functions|
+  VARIABLES					|gyoza-variables|
+BUILTIN RULES					|gyoza-builtin-rules|
+EXAMPLES					|gyoza-examples|
+
+
+==============================================================================
+INTRODUCTION					*gyoza-introduction*
+
+*gyoza.vim* is a Vim/Neovim plugin to complete a closing pair on newline. E.g.
+>
+	int main() {|
+<
+		|  <CR>
+		v
+>
+	int main() {
+		|
+	}
+<
+
+>
+	while (expr) {|}
+<
+		|  <CR>
+		v
+>
+	while (expr) {
+		|
+	}
+<
+
+>
+	if some-condition|
+<
+		|  <CR>
+		v
+>
+	if some-condition|
+		|
+	endif
+<
+
+
+==============================================================================
+REQUIREMENTS					*gyoza-requirements*
+
+- Vim 8.2 or later.
+- Neovim 0.6.0 or later.
+
+
+==============================================================================
+INTERFACE					*gyoza-interface*
+
+------------------------------------------------------------------------------
+FUNCTIONS					*gyoza-functions*
+
+						*gyoza#enable()*
+gyoza#enable()
+	Enable this plugin.  Use |gyoza#disable()| to re-disable this plugin.
+        This function is automatically on Vim startup in default.  To disable
+	this behavior, see |g:gyoza_disable_auto_setup| and
+	|gyoza-example-lazy-loading|.
+	Note that this function does NOT cancel plugin invalidation by
+	|gyoza#disable_for_buffer()|.  Please use |gyoza#enable_for_buffer()|
+	for the purpose.
+
+
+						*gyoza#disable()*
+gyoza#disable()
+	Disable this plugin.  Use |gyoza#enable()| to re-enable this plugin.
+
+
+						*gyoza#enable_for_buffer()*
+gyoza#enable_for_buffer()
+	Enable this plugin for the current buffer.  This is used to cancel
+	temporal plugin invalidation by |gyoza#disable_for_buffer()|.
+
+
+						*gyoza#disable_for_buffer()*
+gyoza#disable_for_buffer()
+	Disable this plugin for the current buffer.  This is useful to
+	temporal plugin invalidation.  Use |gyoza#enable_for_buffer()| to
+	cancel this operation.  |gyoza#enable()| won't cancel this
+	function's temporal plugin invalidation.
+
+
+				*gyoza#config#get_rules_for_filetype()*
+gyoza#config#get_rules_for_filetype({filetype})
+	Get rule stack for {filetype}.  You can add or clear rules via this
+	object.  See |gyoza-rule-stack-functions| for the available functions.
+	You can use "_" for {filetype} to manage filetype-independent rules.
+
+
+				*gyoza#config#load_rules_for_filetype()*
+gyoza#config#load_rules_for_filetype({filetype} [, {force-reload}])
+	Load scripts to add user-defined rules for {filetype}.  This function
+	loads all the script which is placed "gyoza/{filetype}.vim" under
+	'runtimepath' directory.  You can use "_" for {filetype} to define
+	filetype-independent generic rules.
+	The gathered rules are cached and no scripts are loaded anymore on
+	secondly function call.  To forcibly reload rules, specify
+	{force-reload} to true.
+
+				*gyoza#builtin_rules#get_rules_for_filetype()*
+gyoza#builtin_rules#get_rules_for_filetype({filetype})
+	Returns a |Dict| of built-in rules for {filetype}.  The key is a rule
+	name, and the value is a function that adds a rule when it's called.
+	You can use "_" for {filetype} to get filetype-independent built-in
+	rules.  Example: >
+	" Add built-in "if" - "endif" completion for Vim script.
+	let rules = gyoza#builtin_rules#get_rules_for_filetype('vim')
+	call rules.add_if_rule()
+<
+	See |gyoza-builtin-rules| for the list of available built-in rules.
+
+
+			*gyoza#builtin_rules#load_all_rules_for_filetype()*
+gyoza#builtin_rules#load_all_rules_for_filetype({filetype} [, {force-load})
+	Appends all the built-in rules for {filetype} to the rule stack.
+	You can use "_" for {filetype} to load filetype-independent built-in
+	rules.
+	This function remembers for which {filetyp}s the default rules are
+	loaded and no longer loads rules on secondly call for the same
+	{filetype}. To forcibly re-add rules, specify {force-load} to true.
+
+	See |gyoza-builtin-rules| for the list of available built-in rules.
+
+
+------------------------------------------------------------------------------
+RULE STACK FUNCTIONS				*gyoza-rule-stack-functions*
+
+					*gyoza-rule-stack-add_rule()*
+add_rule({pattern}, {pair} [, {cancelers}])
+	Add a rule to the rule stack.
+	{pattern} is a |regexp| string and if this matches to the current
+	line's text this rule is triggered.
+
+				*gyoza-rule-stack-add_rule-functional-pair*
+	{pair} is a |String| or |Funcref|.
+	When {pair} is a |String|, {pair} is exactly what will be completed.
+	When {pair} is a |Funcref|, {pair} will be called in the rule
+	applicant step to get the pair to complete.  The function takes one
+	|Dict| argument consist of these:
+		previous	(|String|)
+				The whole text of previous line.
+
+		next		(|String|)
+				The whole text of next line.
+
+		current		(|String|)
+				The text after cursor.
+
+	and should return a |Dict| with these keys:
+		pair		(|String|, required unless "skip" is given)
+				The pair text.
+
+		cursor_text	(|String|, optional)
+				If this is given, the text after the cursor
+				will be replaced with this.
+
+		cancelers	(|List| of |String|s, optional)
+				Additional {cancelers}.  See the descriptions
+				for {cancelers} below for the each item's
+				syntax.
+
+		skip		(|String|, required unless "pair" is given)
+				Value must be one of "this" and "all".
+				When value is "this", just this rule is
+				skipped.
+				When value is "all", all the rules are skipped
+				for this time.
+
+	Note that this function is called while |textlock| is active.  You
+	cannot do some operations that breaks contexts such as modifying
+	buffer, switching buffer, move window, etc.
+
+	{cancelers} is a |List| of |String|s.  Each item is compared to the
+	next line's text without white-spaces at the head and tail, and if one
+	results in equal this rule is not applied.  Or if one starts with
+	"\=", the following text is interpreted as a |regexp| and is checked
+	if it matches the next line's entire text.  If it matches the next
+	line, this rule is not applied neither.
+
+	Example 1: complete "endif" for "if" statement in Vim script: >
+	let stack = gyoza#config#get_rules_for_filetype('vim')
+	call stack.add_rules('^\s*if\>', 'endif', ['else', '\=^\s*elseif\>'])
+<
+	Example 2: complete "\end{...}" for "\begin{...}" in LaTeX: >
+	function s:gyoza_get_pair_latex_end(lines) abort
+	  const tag = matchstr(a:lines.previous, '\\begin{\zs.\{-}\ze}')
+	  const pair = printf('\end{%s}', tag)
+	  return {'pair': pair}
+	endfunction
+	let stack = gyoza#config#get_rules_for_filetype('latex')
+	call stack.add_rules(
+	  \ '^\s*\\begin{.\{-}}$', function('s:gyoza_get_pair_latex_end'))
+<
+	See also |gyoza-example-write-newline-rules| for other example use of
+	this function.
+
+
+					*gyoza-rule-stack-extend_rules()*
+extend_rules({rule-stack})
+	Add all the rules in {rule-stack} to the rule stack.  {rule-stack}
+	should be what |gyoza#config#get_rules_for_filetype()| returns.
+
+	Example: >
+	" Use rules for C also on C++ code.
+	let stack = gyoza#config#get_rules_for_filetype('cpp')
+	call stack.extend_rules(gyoza#config#get_rules_for_filetype('c'))
+<
+
+					*gyoza-rule-stack-clear_rules()*
+clear_rules()
+	Clear all the rules that the rule stack have.  For example, to clear
+	all the rules for C: >
+	call gyoza#config#get_rules_for_filetype('c').clear_rules()
+<
+
+------------------------------------------------------------------------------
+VARIABLES					*gyoza-variables*
+
+
+						*g:gyoza_disable_auto_setup*
+g:gyoza_disable_auto_setup
+	If this variable is true, all the setup steps on startup will be
+	skipped.  Instead, you have to setup this plugin later e.g. call
+	|gyoza#enable()| function.  See |gyoza-example-lazy-loading| for the
+	example configuration of explicit setup.
+
+	In default, this plugin loads all the built-in rules.  To only disable
+	this behavior, see |g:gyoza_disable_auto_loading_builtin_rules|.
+
+	Default: 0
+
+				*g:gyoza_disable_auto_loading_builtin_rules*
+g:gyoza_disable_auto_loading_builtin_rules
+	If this variable is true, this plugin does not load built-in rules
+	automatically.  Instead, to load built-in rules, you have to call
+	|gyoza#builtin_rules#get_rules_for_filetype()| or
+	|gyoza#builtin_rules#load_all_rules_for_filetype| function explicitly.
+
+	Only valid when |g:gyoza_disable_auto_setup| is not set or set to
+	false.
+
+	Default: 0
+
+
+==============================================================================
+BUILT-IN RULES						*gyoza-builtin-rules*
+
+						*gyoza-builtin-rules-_*
+Filetype independent rules
+
+	{filetype}: "_"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_brace_rule		{			}
+
+						*gyoza-builtin-rules-c*
+C/C++
+
+	{filetype}: "c"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_brace_rule		struct ... {		};
+				enum ... {		};
+				class ... {		};
+				switch (...) {		};
+
+						*gyoza-builtin-rules-go*
+Go
+
+	{filetype}: "go"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_brace_rule		select {		};
+				switch (...) {		};
+				go func (...) {		}()
+				defer func (...) {	}()
+	add_parenthesis_rule	import (		)
+				var (			)
+				const (			)
+
+						*gyoza-builtin-rules-objc*
+Objective-C
+
+	{filetype}: "objc"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_interface_rule	@interface		@end
+	add_implementation_rule	@implementation		@end
+
+						*gyoza-builtin-rules-sh*
+Shell script
+
+	{filetype}: "sh"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_do_rule		do			done
+	add_if_rule		if ...			fi
+
+						*gyoza-builtin-rules-tex*
+TeX
+
+	{filetype}: "tex"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_begin_rule		\begin{...}		\end{...}
+
+						*gyoza-builtin-rules-vim*
+Vim script
+
+	{filetype}: "vim"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_function_rule	function ...(...)	endfunction
+	add_def_rule		def ...(...)		enddef
+	add_if_rule		if ...			endif
+	add_while_rule		while ...		endwhile
+	add_for_rule		for ...			endfor
+	add_try_rule		try			endtry
+	add_augroup_rule	augroup ...		augroup END
+	add_echohl_rule		echohl ...		echohl None
+	add_heredoc_rule	let ... =<< {marker}	{marker}
+				var ... =<< {marker}	{marker}
+				const ... =<< {marker}	{marker}
+				final ... =<< {marker}	{marker}
+	add_class_rule		class ...		endclass
+	add_interface_rule	interface ...		endinterface
+	add_enum_rule		enum			endenum
+	add_brace_rule		{			\ } (Vim script)
+				{			}   (Vim9 script)
+	add_bracket_rule	[			\ ] (Vim script)
+				[			]   (Vim9 script)
+
+
+						*gyoza-builtin-rules-vimspec*
+Vimspec
+
+	{filetype}: "vimspec"
+
+	Name			Opening-pair		Closing-pair~
+	------------------------------------------------------------
+	add_describe_rule	Describe ...		End
+	add_before_rule		Before ...		End
+	add_after_rule		After ...		End
+	add_context_rule	Context ...		End
+	add_it_rule		It ...			End
+
+==============================================================================
+EXAMPLES						*gyoza-examples*
+
+
+						*gyoza-example-lazy-loading*
+Lazy loading~
+
+In default, this plugin calls |gyoza#enable()| on Vim startup and loads all
+the scripts under autoload directory.  To avoid this, you can write a
+configuration in your .vimrc to disable this default behavior and explicitly
+load this plugin lazily: >
+	let g:gyoza_disable_auto_setup = 1
+	augroup vimrc-gyoza
+	  autocmd!
+	  autocmd InsertEnter * ++once call gyoza#enable()
+	  autocmd InsertEnter * ++once
+	    \ call gyoza#config#load_rules_for_filetype('_')
+	  autocmd FileType *
+	    \ call gyoza#config#load_rules_for_filetype(expand('<amatch>'))
+
+	  " If you want to enable all the built-in rules, also add below.
+	  autocmd InsertEnter * ++once
+	    \ call gyoza#builtin_rules#load_all_rules_for_filetype('_')
+	  autocmd FileType *
+	    \ call gyoza#builtin_rules#load_all_rules_for_filetype(expand('<amatch>'))
+	augroup END
+<
+But as a limitation, if you use this way of startup, this plugin fails to
+handle the newline on the first InsertEnter event after Vim is launched if it
+is triggered by |o|, |O| or similar functionality.  To avoid this, you may be
+able to use this a bit hacky trick: >
+	nnoremap o A<CR>
+	nnoremap O kA<CR>
+Or with cleaning this hacky mapping on the first use: >
+	nnoremap o <Cmd>nunmap o<CR>A<CR>
+	nnoremap O <Cmd>nunmap O<CR>kA<CR>
+<
+
+					*gyoza-example-write-newline-rules*
+Write newline rules~
+
+TODO: write
+
+
+==============================================================================
+vim:tw=78:fo=tcq2mM:ts=8:ft=help:norl
