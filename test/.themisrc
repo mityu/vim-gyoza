@@ -9,6 +9,8 @@ for s:f in split(glob(expand('<sfile>:h') . '/helper/*.vim'), "\n")
 endfor
 unlet s:f
 
+let g:gyoza_disable_auto_setup = 1
+
 call themis#helper('deps').git('mityu/vim-themis-helper-scripter')
 
 function NewScripter() abort
