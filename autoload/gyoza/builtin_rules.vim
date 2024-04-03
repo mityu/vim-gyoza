@@ -13,13 +13,25 @@ function s:find_sid(filetype, scriptpath) abort
   return str2nr(script_list[0][0])
 endfunction
 
+if has('win32')
+  function s:normalize_path(path) abort
+    return a:path->substitute('/', '\\', 'g')
+  endfunction
+else
+  function s:normalize_path(path) abort
+    return a:path
+  endfunction
+endif
+
 let s:cache = {}
 function gyoza#builtin_rules#get_rules_for_filetype(filetype) abort
   if has_key(s:cache, a:filetype)
     return s:cache[a:filetype]
   endif
   const scriptpath =
-    \ printf('%s/builtin_rules/%s.vim', s:plugin_root, a:filetype)->resolve()
+    \ printf('%s/builtin_rules/%s.vim', s:plugin_root, a:filetype)
+    \ ->s:normalize_path()
+    \ ->resolve()
   if !filereadable(scriptpath)
     let s:cache[a:filetype] = {}
     return {}
