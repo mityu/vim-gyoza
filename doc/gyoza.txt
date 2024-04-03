@@ -56,8 +56,8 @@ INTRODUCTION					*gyoza-introduction*
 ==============================================================================
 REQUIREMENTS					*gyoza-requirements*
 
-- Vim 8.2 or later.
-- Neovim 0.6.0 or later.
+- Vim 9.0 or later.
+- Neovim 0.7.0 or later.
 
 
 ==============================================================================

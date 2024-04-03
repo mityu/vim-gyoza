@@ -22,8 +22,8 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   let s:rule_stack = a:all_rules->copy()->filter('prevline =~# v:val.pattern')
   let s:cursor_text = getline('.')[col('.') - 1 :]
 
-  imap <buffer> <silent> <expr> <Plug>(_gyoza_apply) <SID>do_apply()
-  imap <buffer> <silent> <expr> <Plug>(_gyoza_check_state) <SID>check_apply_state()
+  inoremap <buffer> <silent> <expr> <Plug>(_gyoza_apply) <SID>do_apply()
+  inoremap <buffer> <silent> <expr> <Plug>(_gyoza_check_state) <SID>check_apply_state()
   inoremap <buffer> <Plug>(_gyoza_do_input) <Nop>
   inoremap <buffer> <expr> <Plug>(_gyoza_setup_newline_removal)
     \ <SID>setup_newline_removal()
