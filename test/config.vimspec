@@ -132,7 +132,6 @@ Describe gyoza#config#load_rules_for_filetype()
   Before all
     let runtimepath_save = &runtimepath
     set runtimepath+=test/test-runtime
-    call themis#log(&runtimepath)
   End
 
   After all

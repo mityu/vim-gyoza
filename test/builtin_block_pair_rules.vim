@@ -59,16 +59,12 @@ let s:tests.vim = {
   \ ],
   \ 'add_function_rule': [
   \   [['function F()'], [1, 1], ['function F()', 'endfunction']],
-  \   [['legacy function F()'], [1, 1], ['legacy function F()', 'endfunction']],
   \   [['func F()'], [1, 1], ['func F()', 'endfunc']],
   \   [['function F()', 'endfunction'], [1, 1], ['function F()', '', 'endfunction']],
   \   [['func F()', 'endfunction'], [1, 1], ['func F()', '', 'endfunction']],
   \ ],
   \ 'add_def_rule': [
   \   [['def F()'], [1, 1], ['def F()', 'enddef']],
-  \   [['export def F()'], [1, 1], ['export def F()', 'enddef']],
-  \   [['legacy def F()'], [1, 1], ['legacy def F()', 'enddef']],
-  \   [['static def F()'], [1, 1], ['static def F()', 'enddef']],
   \ ],
   \ 'add_try_rule': [
   \   [['try'], [1, 1], ['try', 'endtry']],
@@ -113,6 +109,16 @@ let s:tests.vim = {
   \   [['final l =<< END'], [1, 1], ['final l =<< END', 'END']],
   \ ],
   \}
+if v:version >= 901
+  let s:tests.vim.add_function_rule += [
+    \   [['legacy function F()'], [1, 1], ['legacy function F()', 'endfunction']],
+    \]
+  let s:tests.vim.add_def_rule += [
+    \   [['export def F()'], [1, 1], ['export def F()', 'enddef']],
+    \   [['legacy def F()'], [1, 1], ['legacy def F()', 'enddef']],
+    \   [['static def F()'], [1, 1], ['static def F()', 'enddef']],
+    \]
+endif
 " Skip vimspec tests because vimspec ftplugin needs themis.vim.
 " let s:tests.vimspec = {
 "  \ 'add_describe_rule': [

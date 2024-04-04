@@ -56,17 +56,24 @@ let s:tests.vim = {
   \   [['{foo}'], {-> [1, match(getline(1), '{') + 1]}, ['{', "\t\t\t\\ foo", "\t\t\t\\ }"]],
   \   [['({)'], {-> [1, match(getline(1), '{') + 1]}, ['({', "\t\t\t\\ })"]],
   \   [['[{]'], {-> [1, match(getline(1), '{') + 1]}, ['[{', "\t\t\t\\ }]"]],
-  \   [['vim9script', '{'], {-> [2, match(getline(2), '{') + 1]}, ['vim9script', '{', "\t}"]],
   \ ],
   \ 'add_bracket_rule': [
   \   [['['], [1, '$'], ['[', "\t\t\t\\ ]"]],
   \   [['[foo]'], {-> [1, match(getline(1), '[') + 1]}, ['[', "\t\t\t\\ foo", "\t\t\t\\ ]"]],
   \   [['([)'], {-> [1, match(getline(1), '[') + 1]}, ['([', "\t\t\t\\ ])"]],
   \   [['{[}'], {-> [1, match(getline(1), '[') + 1]}, ['{[', "\t\t\t\\ ]}"]],
-  \   [['vim9script', '['], {-> [2, match(getline(2), '[') + 1]}, ['vim9script', '[', ']']],
-  \   [['vim9script', '[]'], {-> [2, match(getline(2), '[') + 1]}, ['vim9script', '[', ']']],
   \ ],
   \}
+if v:version >= 901
+  let s:tests.vim.add_brace_rule += [
+    \   [['vim9script', '{'], {-> [2, match(getline(2), '{') + 1]}, ['vim9script', '{', "\t}"]],
+    \]
+  let s:tests.vim.add_bracket_rule += [
+    \   [['vim9script', '['], {-> [2, match(getline(2), '[') + 1]}, ['vim9script', '[', ']']],
+    \   [['vim9script', '[]'], {-> [2, match(getline(2), '[') + 1]}, ['vim9script', '[', ']']],
+    \]
+endif
+
 
 function s:get_curpos(curpos) abort
   if type(a:curpos) ==# v:t_func
@@ -100,7 +107,7 @@ function s:do_test_for_bracket_pair_rule(filetype, rule_name, lines, curpos, exp
   call s:assert.equals(GetAllLines(), a:expected)
 endfunction
 
-let s:suite = themis#suite('default-rules')
+let s:suite = themis#suite('builtin-rules')
 
 function s:suite.before()
   runtime autoload/gyoza.vim  " Reset callback.

@@ -8,6 +8,7 @@ let s:C = ScriptFuncs('autoload/gyoza/config.vim')
 
 Describe Applier class
   Before all
+    runtime autoload/gyoza.vim
     command ResetOptions
       \ set expandtab& smarttab& shiftwidth& tabstop& backspace&
     call test_override('char_avail', 1)
