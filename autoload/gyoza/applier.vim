@@ -34,7 +34,7 @@ function gyoza#applier#trigger_applicant(all_rules) abort
     inoremap <buffer> <Plug>(_gyoza_restore_cursor_text) <Nop>
     inoremap <buffer> <Plug>(_gyoza_remove_cursor_text) <Nop>
   else
-    const restore_text = s:cursor_text->substitute('|', '<bar>', 'g')
+    const restore_text = s:escape_text_for_mapping(s:cursor_text)
     execute 'inoremap <buffer> <silent> <Plug>(_gyoza_restore_cursor_text)'
       \ restore_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
     execute 'inoremap <buffer> <silent> <Plug>(_gyoza_remove_cursor_text)'
@@ -125,7 +125,7 @@ function s:check_apply_state() abort
     endif
     let rhs_do_input = '<C-g>U<Up><C-g>U<End><CR>'
     if s:cursor_text !=# ''
-      const restore_text = s:cursor_text->substitute('|', '<bar>', 'g')
+      const restore_text = s:escape_text_for_mapping(s:cursor_text)
       let rhs_do_input ..= restore_text .. repeat('<C-g>U<Left>', strchars(s:cursor_text))
     endif
 
@@ -246,6 +246,12 @@ endfunction
 function s:replace_termcode(keys) abort
   return substitute(a:keys, '<[^<]\+>',
     \ '\=eval(printf(''"\%s"'', submatch(0)))', 'g')
+endfunction
+
+function s:escape_text_for_mapping(text) abort
+  return a:text
+    \->substitute('<', '\<lt>', 'g')
+    \->substitute('|', '<bar>', 'g')
 endfunction
 
 function s:get_indent_width(line) abort
