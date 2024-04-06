@@ -465,6 +465,17 @@ Describe Applier class
       \.run()
   End
 
+  It does not collapse cursor text when it contains special character like "<Tab>".
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call setline(1, 'if<Tab>')
+    call cursor(1, 1)
+    call NewScripter()
+      \.feedkeys('la<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\t<Tab>", 'endif'])})
+      \.run()
+  End
+
   It clears temporal mappings properly.
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call NewScripter()
@@ -568,6 +579,24 @@ Describe Applier class
         \.call({-> s:assert.equals(GetCurpos(), [2, 2])})
         \.run()
       Assert LengthOf(call_count, 3)
+    End
+
+    It does not collapse cursor text when it contains special character like "<Tab>".
+      const F = {lines -> [
+        \   s:assert.equals(lines.current, '<Space>'),
+        \   {'pair': 'endif', 'cursor_text': '<Tab>'},
+        \ ][1]}
+      let rules = NewConfig()
+        \.add_rule('^\s*if\>', 'endif', ['guard'])
+        \.add_rule('^\s*if\>', F)
+        \._rules
+      call setline(1, ['if<Space>', 'guard'])
+      call cursor(1, 1)
+      call NewScripter()
+        \.feedkeys('la<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['if', "\t<Tab>", 'endif', 'guard'])})
+        \.run()
     End
 
   End
