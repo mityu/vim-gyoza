@@ -19,7 +19,7 @@ function gyoza#applier#trigger_applicant(all_rules) abort
     return
   endif
 
-  let s:rule_stack = a:all_rules->copy()->filter('prevline =~# v:val.pattern')
+  let s:rule_stack = a:all_rules->deepcopy()->filter('prevline =~# v:val.pattern')
   let s:cursor_text = getline('.')[col('.') - 1 :]
 
   inoremap <buffer> <silent> <expr> <Plug>(_gyoza_apply) <SID>do_apply()

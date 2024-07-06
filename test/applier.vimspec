@@ -435,6 +435,21 @@ Describe Applier class
       \.run()
   End
 
+  It forgets kept text on next application when rule is defined with a function.
+    let rules = NewConfig().add_rule('^\s*if', {lines ->
+      \ {'pair': 'endif', 'cursor_text': lines.current}})._rules
+    call setline(1, 'iffoo')
+    call NewScripter()
+      \.feedkeys('^la<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfoo", 'endif'])})
+      \.feedkeys('<ESC>Goif<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\tfoo", 'endif', 'if', "\t", 'endif'])})
+      \.call({-> s:assert.equals(GetCurpos(), [5, 2])})
+      \.run()
+  End
+
   It completes pair when block is nested.
     let rules = NewConfig()
       \.add_rule('^\s*if\>', 'endif')
