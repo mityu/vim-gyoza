@@ -289,8 +289,8 @@ Go
 
 	Name			Opening-pair		Closing-pair~
 	------------------------------------------------------------
-	add_brace_rule		select {		};
-				switch (...) {		};
+	add_brace_rule		select {		}
+				switch (...) {		}
 				go func (...) {		}()
 				defer func (...) {	}()
 	add_parenthesis_rule	import (		)
