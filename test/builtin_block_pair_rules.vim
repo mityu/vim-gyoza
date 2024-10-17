@@ -39,6 +39,7 @@ let s:tests.tex = {
   \   [['\begin{foo}'], [1, 1], ['\begin{foo}', '\end{foo}']],
   \   [['\begin{bar}'], [1, 1], ['\begin{bar}', '\end{bar}']],
   \   [['\begin{baz*}'], [1, 1], ['\begin{baz*}', '\end{baz*}']],
+  \   [['\begin{document}', 'some text'], [1, 1], ['\begin{document}', '', 'some text']],
   \ ],
   \}
 let s:tests.vim = {
