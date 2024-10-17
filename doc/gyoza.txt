@@ -102,14 +102,13 @@ gyoza#update_context()
 	useful not to trigger application of rules when some other script
 	(e.g. snippet plugin) add newlines on buffer.
 	For example, updating |gyoza.vim|'s internal context after vim-lsp's
-	"lsp_complete_done" |User| autocmd, which invoked after text edit may
-	be applied to buffer: >
-		augroup vimrc-gyoza
-		  autocmd!
-		  autocmd User lsp_complete_done call gyoza#update_context()
-		augroup END
+	"lsp_complete_done" |User| autocmd since some text edits may applied
+	to buffer just before it: >
+	augroup vimrc-gyoza
+	  autocmd!
+	  autocmd User lsp_complete_done call gyoza#update_context()
+	augroup END
 <
-
 
 				*gyoza#config#get_rules_for_filetype()*
 gyoza#config#get_rules_for_filetype({filetype})
@@ -125,8 +124,8 @@ gyoza#config#load_rules_for_filetype({filetype} [, {force-reload}])
 	'runtimepath' directory.  You can use "_" for {filetype} to define
 	filetype-independent generic rules.
 	The gathered rules are cached and no scripts are loaded anymore on
-	secondly function call.  To forcibly reload rules, specify
-	{force-reload} to true.
+	secondly function call.  To forcibly reload rules, pass |v:true| to
+	{force-reload}.
 
 				*gyoza#builtin_rules#get_rules_for_filetype()*
 gyoza#builtin_rules#get_rules_for_filetype({filetype})
@@ -148,7 +147,7 @@ gyoza#builtin_rules#load_all_rules_for_filetype({filetype} [, {force-load})
 	rules.
 	This function remembers for which {filetyp}s the default rules are
 	loaded and no longer loads rules on secondly call for the same
-	{filetype}. To forcibly re-add rules, specify {force-load} to true.
+	{filetype}.  To forcibly re-add rules, pass |v:true| to {force-load}.
 
 	See |gyoza-builtin-rules| for the list of available built-in rules.
 
