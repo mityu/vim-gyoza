@@ -243,6 +243,17 @@ Describe Applier class
       \.run()
   End
 
+  It skips rule applies when some text exists before cursor.
+    let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
+    call NewScripter()
+      \.feedkeys('iif<CR>')
+      \.call({-> [setline('.', "\treturn "), cursor(2, 9)]})
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['if', "\treturn "])})
+      \.call({-> s:assert.equals(GetCurpos(), [2, 9])})
+      \.run()
+  End
+
   It doesn't apply rule when canceler is on the next line (literal).
     let lines =<< trim END
     if
