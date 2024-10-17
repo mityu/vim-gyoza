@@ -549,6 +549,19 @@ Describe Applier class
         \.run()
     End
 
+    It skips application of the remaining rules.
+      let rules = NewConfig()
+        \.add_rule('^\s*try\>', {_ -> {'skip': 'rest', 'pair': 'endtry'}}, ['finally'])
+        \.add_rule('^\s*try\>', 'endtry')
+        \._rules
+      call setline(1, ['try', 'finally', 'endtry'])
+      call NewScripter()
+        \.feedkeys('ggA<CR>')
+        \.call({-> gyoza#applier#trigger_applicant(rules)})
+        \.call({-> s:assert.equals(GetAllLines(), ['try', "\t", 'finally', 'endtry'])})
+        \.run()
+    End
+
     It can change the cursor line text.
       let rules = NewConfig()
         \.add_rule('^\s*if\>', {_ -> {'pair': 'endif', 'cursor_text': 'expr'}})
