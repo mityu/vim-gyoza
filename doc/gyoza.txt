@@ -96,6 +96,21 @@ gyoza#disable_for_buffer()
 	function's temporal plugin invalidation.
 
 
+						*gyoza#update_context()*
+gyoza#update_context()
+	Update the internal context with the current buffer state.  This is
+	useful not to trigger application of rules when some other script
+	(e.g. snippet plugin) add newlines on buffer.
+	For example, updating |gyoza.vim|'s internal context after vim-lsp's
+	"lsp_complete_done" |User| autocmd, which invoked after text edit may
+	be applied to buffer: >
+		augroup vimrc-gyoza
+		  autocmd!
+		  autocmd User lsp_complete_done call gyoza#update_context()
+		augroup END
+<
+
+
 				*gyoza#config#get_rules_for_filetype()*
 gyoza#config#get_rules_for_filetype({filetype})
 	Get rule stack for {filetype}.  You can add or clear rules via this

@@ -18,6 +18,10 @@ function gyoza#disable_for_buffer() abort
   let s:skip_applicant = v:false
 endfunction
 
+function gyoza#update_context() abort
+  call gyoza#observer#update_context()
+endfunction
+
 function s:trigger_applicant() abort
   if !s:skip_applicant && get(b:, 'gyoza_enable', 1)
     let s:skip_applicant = v:true
