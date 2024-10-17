@@ -13,8 +13,11 @@ function gyoza#applier#trigger_applicant(all_rules) abort
   const nextlinenr = nextnonblank(line('.') + 1)
   const prevline = getline(prevlinenr)
 
-  " Do not apply rules when the next line has deeper indentation.
-  if s:get_indent_width(getline(nextlinenr)) > s:get_indent_width(prevline)
+  " Do not apply rules when
+  " - the next line has deeper indentation
+  " - some text exists before cursor
+  if s:get_indent_width(getline(nextlinenr)) > s:get_indent_width(prevline) ||
+    \ strpart(getline('.'), 0, col('.') - 1)->trim() !=# ''
     call call(s:callback_on_finish_applicant, [])
     return
   endif
