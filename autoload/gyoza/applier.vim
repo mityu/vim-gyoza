@@ -69,6 +69,8 @@ function s:do_apply() abort
       return "\<Plug>(_gyoza_clear_temporal_mappings)"
     elseif skip ==# 'this'
       return "\<Plug>(_gyoza_apply)"
+    elseif skip ==# 'rest'
+      let s:rule_stack = []
     endif
 
     if !has_key(config, 'pair')
