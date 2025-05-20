@@ -190,11 +190,13 @@ add_rule({pattern}, {pair} [, {cancelers}])
 				syntax.
 
 		skip		(|String|, required unless "pair" is given)
-				Value must be one of "this" and "all".
-				When value is "this", just this rule is
-				skipped.
-				When value is "all", all the rules are skipped
-				for this time.
+				Value must be one of "this", "all" and "rest".
+				When value is
+				 - "this", just this rule is skipped.
+				 - "all", all the rules are skipped including
+				   this rule.
+				 - "rest", this rule is applied but the
+				   remaining rules are all skipped.
 
 	Note that this function is called while |textlock| is active.  You
 	cannot do some operations that breaks contexts such as modifying
@@ -211,15 +213,15 @@ add_rule({pattern}, {pair} [, {cancelers}])
 	let stack = gyoza#config#get_rules_for_filetype('vim')
 	call stack.add_rules('^\s*if\>', 'endif', ['else', '\=^\s*elseif\>'])
 <
-	Example 2: complete "\end{...}" for "\begin{...}" in LaTeX: >
-	function s:gyoza_get_pair_latex_end(lines) abort
+	Example 2: complete "\end{...}" for "\begin{...}" in TeX: >
+	function s:gyoza_get_pair_tex_end(lines) abort
 	  const tag = matchstr(a:lines.previous, '\\begin{\zs.\{-}\ze}')
 	  const pair = printf('\end{%s}', tag)
 	  return {'pair': pair}
 	endfunction
-	let stack = gyoza#config#get_rules_for_filetype('latex')
+	let stack = gyoza#config#get_rules_for_filetype('tex')
 	call stack.add_rules(
-	  \ '^\s*\\begin{.\{-}}$', function('s:gyoza_get_pair_latex_end'))
+	  \ '^\s*\\begin{.\{-}}$', function('s:gyoza_get_pair_tex_end'))
 <
 	See also |gyoza-example-write-newline-rules| for other example use of
 	this function.
