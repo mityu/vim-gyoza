@@ -491,6 +491,16 @@ Describe Applier class
       \.run()
   End
 
+  It works well even when there're "|" and key notation in the pair text.
+    let rules = NewConfig().add_rule('^', {_ -> {'pair': '|xxx<Tab>'}})._rules
+    call cursor(1, 1)
+    call NewScripter()
+      \.feedkeys('a<CR>')
+      \.call({-> gyoza#applier#trigger_applicant(rules)})
+      \.call({-> s:assert.equals(GetAllLines(), ['', '', '|xxx<Tab>'])})
+      \.run()
+  End
+
   It does not collapse cursor text when it contains special character like "<Tab>".
     let rules = NewConfig().add_rule('^\s*if\>', 'endif')._rules
     call setline(1, 'if<Tab>')

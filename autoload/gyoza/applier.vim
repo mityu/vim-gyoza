@@ -101,7 +101,8 @@ function s:do_apply() abort
     endif
   endif
 
-  execute 'inoremap <buffer> <Plug>(_gyoza_do_input)' s:current_rule.pair
+  execute 'inoremap <buffer> <Plug>(_gyoza_do_input)'
+    \ s:escape_text_for_mapping(s:current_rule.pair)
 
   " I don't know why but the last input character will be disappared without
   " <Ignore> between these two mappings.
