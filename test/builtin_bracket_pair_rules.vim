@@ -17,6 +17,11 @@ let s:tests.c = {
   \ 'add_brace_rule': [
   \   [['struct {'], [1, '$'], ['struct {', '};']],
   \   [['struct A {'], [1, '$'], ['struct A {', '};']],
+  \   [['struct {};'], {-> [1, match(getline(1), '{') + 1]}, ['struct {', '};']],
+  \   [['struct {}'], {-> [1, match(getline(1), '{') + 1]}, ['struct {', '};']],
+  \   [['struct {} A;'], {-> [1, match(getline(1), '{') + 1]}, ['struct {', '} A;']],
+  \   [['struct {} A; // XXX'], {-> [1, match(getline(1), '{') + 1]}, ['struct {', '} A; // XXX']],
+  \   [['struct {', '} A;'], [1, '$'], ['struct {', '', '} A;']],
   \   [['typedef struct {'], [1, '$'], ['typedef struct {', '};']],
   \   [['typedef struct {', 'public:'], [1, '$'], ['typedef struct {', '', 'public:']],
   \   [['typedef struct {', 'private:'], [1, '$'], ['typedef struct {', '', 'private:']],
